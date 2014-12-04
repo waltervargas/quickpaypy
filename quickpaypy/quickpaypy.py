@@ -12,6 +12,8 @@ __version__ = "0.0.1"
 import httplib2
 import urllib
 import xml2dict
+import hashlib
+
 import pdb
 
 class QuickPayWebServiceError(Exception):
@@ -52,6 +54,7 @@ class QuickPayWebService(object):
         @param client_args: Dict of extra arguments accepted by httplib2
         """
         self._api_url = 'https://secure.quickpay.dk/api'
+        self._api_protocol = '7'
 
         self.http_client = None
 
@@ -70,6 +73,20 @@ class QuickPayWebService(object):
             'Accept': 'application/json',
             'Content-type': 'application/x-www-form-urlencoded',
             }
+
+    def _gen_md5_check(self, fields_ord, fields):
+        """
+        :param fields: A tuple with fields for make md5_check
+        :type fields: tuple
+        :returns: md5 hexdigest
+        """
+        str_check = ''
+        for field in fields_ord:
+            str_check += fields.get(field)
+
+        md5_check = hashlib.md5(str_check).hexdigest()
+        return md5_check
+
 
     def authorize(self, ordernumber, amount, currency, cardnumber, expirationdate, cvd, autocapture = False):
         """
@@ -101,8 +118,8 @@ class QuickPayWebService(object):
         :type autocapture: bolean
         :returns: object An object with response fields according to the documentation
         """
-
         fields = {
+            'protocol': self._api_protocol,
             'msgtype': 'authorize',
             'ordernumber': ordernumber,
             'amount': amount,
@@ -110,9 +127,25 @@ class QuickPayWebService(object):
             'cardnumber': cardnumber,
             'expirationdate': expirationdate,
             'cvd': cvd,
-            'autocapture': str(int(autocapture))
+            'autocapture': str(int(autocapture)),
+            'merchant': self._api_merchant,
+            'apikey': self._api_key,
+            'secret': self._api_secret
             }
+
+        # tuple of fields for calculate md5_check
+        fields_ord = (
+            'protocol', 'msgtype', 'merchant',
+            'ordernumber', 'amount', 'currency',
+            'autocapture', 'cardnumber', 'expirationdate',
+            'cvd', 'apikey', 'secret')
+
+        md5_check = self._gen_md5_check(fields_ord, fields)
+
+        fields.update({'md5check': md5_check})
+
         return self._execute(fields)
+
 
     def cancel(self, transaction):
         """
