@@ -88,7 +88,7 @@ class QuickPayWebService(object):
         return md5_check
 
 
-    def authorize(self, ordernumber, amount, currency, cardnumber, expirationdate, cvd, autocapture = False):
+    def authorize(self, ordernumber, amount, currency, cardnumber, expirationdate, cvd, testmode=False, autocapture=False):
         """
         Make an authorize action
 
@@ -130,7 +130,8 @@ class QuickPayWebService(object):
             'autocapture': str(int(autocapture)),
             'merchant': self._api_merchant,
             'apikey': self._api_key,
-            'secret': self._api_secret
+            'secret': self._api_secret,
+            'testmode': str(int(testmode))
             }
 
         # tuple of fields for calculate md5_check
@@ -138,7 +139,7 @@ class QuickPayWebService(object):
             'protocol', 'msgtype', 'merchant',
             'ordernumber', 'amount', 'currency',
             'autocapture', 'cardnumber', 'expirationdate',
-            'cvd', 'apikey', 'secret')
+            'cvd', 'testmode', 'apikey', 'secret')
 
         md5_check = self._gen_md5_check(fields_ord, fields)
 
@@ -263,14 +264,6 @@ class QuickPayWebService(object):
         request_headers = self.headers.copy()
         request_headers.update(add_headers)
 
-        # require fields in all operations
-        fields.update({
-            'protocol': '7',
-            'merchant': self._api_merchant,
-            'secret': self._api_secret,
-            'api_key': self._api_key
-        })
-
         params = urllib.urlencode(fields)
 
         header, content = self.http_client.request(
@@ -294,16 +287,12 @@ if __name__ == '__main__':
     api_key = '3uNkazijf7e49nvA224894FtGIEmS6U31CcYV82519M5w733ypqQ56987T5XlWrD'
     quickpay = QuickPayWebService(merchant, secret, api_key)
 
-    result, response = quickpay.authorize(
-        ordernumber='338742987466',
+    pprint(quickpay.authorize(
+        ordernumber='444335566234234',
         amount='100',
         currency='DKK',
         cardnumber='4571000000000001',
-        expirationdate='0916',
-        cvd='123'
-    )
-
-    if result:
-        pprint(response)
-    else:
-        print "Error Code: %s, Error Description: %s" % response.get('ResponseCode'), response.get('ResponseDescription')
+        expirationdate='1609',
+        cvd='123',
+        testmode=True
+    ))
