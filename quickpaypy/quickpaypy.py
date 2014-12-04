@@ -229,6 +229,8 @@ class QuickPayWebService(object):
             if res.get('qpstat') != '000':
                 code = res.get('qpstat')
                 message = res.get('qpstatmsg')
+                if res.get('chstat'):
+                    message += " [" + res['chstat'] + "]: " + res['chstatmsg']
                 raise QuickPayWebServiceError(error_label % (code, message))
 
             return True
@@ -280,6 +282,7 @@ class QuickPayWebService(object):
 
         status_code = int(header['status'])
         self._check_status_code(status_code, content)
+        content = xml2dict.xml2dict(content)
         return content, status_code, header
 
 if __name__ == '__main__':
@@ -292,11 +295,11 @@ if __name__ == '__main__':
     quickpay = QuickPayWebService(merchant, secret, api_key)
 
     result, response = quickpay.authorize(
-        ordernumber='338742987465',
+        ordernumber='338742987466',
         amount='100',
         currency='DKK',
-        cardnumber='4111111111111111',
-        expirationdate='1508',
+        cardnumber='4571000000000001',
+        expirationdate='0916',
         cvd='123'
     )
 
