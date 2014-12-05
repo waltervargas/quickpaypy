@@ -46,12 +46,9 @@ class QuickPayWebService(object):
 
         ...
 
-        @param merchant: The QuickPayId
-        @param secret: The MD5 secret code
-        @param api_key: The API Key
-        @param debug: Debug mode Activated (True) or deactivated (False)
-        @param headers: Custom header, is a dict accepted by httplib2
-        @param client_args: Dict of extra arguments accepted by httplib2
+        :param merchant: The QuickPayId
+        :param secret: The MD5 secret code
+        :param api_key: The API Key
         """
         self._api_url = 'https://secure.quickpay.dk/api'
         self._api_protocol = '7'
@@ -75,7 +72,8 @@ class QuickPayWebService(object):
             }
 
     def _gen_md5_check(self, fields_ord, fields):
-        """
+        """ Calculate md5check field.
+        
         :param fields: A tuple with fields for make md5_check
         :type fields: tuple
         :returns: md5 hexdigest
@@ -87,6 +85,20 @@ class QuickPayWebService(object):
         md5_check = hashlib.md5(str_check).hexdigest()
         return md5_check
 
+    def _prepare_fields(self, fields_ord, fields):
+        """ Calculate md5check and update fields dict with md5check value
+        
+        :param fields_ord: A tuple with fields names ordered
+        :type fields_ord: tuple
+        :param fields: A dict with fields
+        :type fields: dict
+        :returns: Fields ready for execute request 
+        """
+
+        md5_check = self._gen_md5_check(fields_ord, fields)
+        fields.update({'md5check': md5_check})
+        return fields
+        
 
     def authorize(self, ordernumber, amount, currency, cardnumber, expirationdate, cvd, testmode=False, autocapture=False):
         """
@@ -141,9 +153,7 @@ class QuickPayWebService(object):
             'autocapture', 'cardnumber', 'expirationdate',
             'cvd', 'testmode', 'apikey', 'secret')
 
-        md5_check = self._gen_md5_check(fields_ord, fields)
-
-        fields.update({'md5check': md5_check})
+        fields = self._prepare_fields(fields_ord, fields)
 
         return self._execute(fields)
 
@@ -197,13 +207,11 @@ class QuickPayWebService(object):
             'protocol', 'msgtype', 'merchant', 'amount', 'finalize',
             'transaction', 'apikey', 'secret')
 
-        md5_check = self._gen_md5_check(fields_ord, fields)
-
-        fields.update({'md5check': md5_check})
+        fields = self._prepare_fields(fields_ord, fields)
 
         return self._execute(fields)
 
-    def status_from_order(self, transaction):
+    def status_from_transaction(self, transaction):
         """
         This message type is used when the merchant wants to check the status of a transaction. 
         The response from this message type differs from the others as it contains the history 
@@ -215,10 +223,20 @@ class QuickPayWebService(object):
         """
 
         fields = {
+            'protocol': self._api_protocol,
             'msgtype': 'status',
+            'merchant': self._api_merchant,
             'transaction': transaction,
+            'apikey': self._api_key,
+            'secret': self._api_secret
             }
 
+        fields_ord = (
+            'protocol', 'msgtype', 'merchant',
+            'transaction', 'apikey', 'secret')
+
+        fields = self._prepare_fields(fields_ord, fields)
+            
         return self._execute(fields)
 
     def _check_status_code(self, status_code, content):
@@ -323,10 +341,9 @@ if __name__ == '__main__':
     pdb.set_trace()
     transaction = resp.get('content').get('transaction')
 
-    resp = quickpay.capture(transaction, '025')
-    resp = quickpay.capture(transaction, '025')
-    resp = quickpay.capture(transaction, '025')
-    resp = quickpay.capture(transaction, '025')
-    pprint(resp)
-    resp = quickpay.capture(transaction, '025')
+    quickpay.capture(transaction, '025')
+    quickpay.capture(transaction, '025')
+    quickpay.capture(transaction, '025')
+    quickpay.capture(transaction, '025')
+    resp = quickpay.status_from_transaction(transaction)
     pprint(resp)
