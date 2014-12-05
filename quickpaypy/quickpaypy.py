@@ -82,7 +82,7 @@ class QuickPayWebService(object):
         """
         str_check = ''
         for field in fields_ord:
-            str_check += fields.get(field)
+            str_check += str(fields.get(field))
 
         md5_check = hashlib.md5(str_check).hexdigest()
         return md5_check
@@ -183,15 +183,27 @@ class QuickPayWebService(object):
         """
 
         fields = {
+            'protocol': self._api_protocol,
             'msgtype': 'capture',
-            'transaction': transaction,
+            'merchant': self._api_merchant,
             'amount': amount,
-            'finalize': int(finalize)
-            }
+            'finalize': str(int(finalize)),
+            'transaction': transaction,
+            'apikey': self._api_key,
+            'secret': self._api_secret
+        }
+
+        fields_ord = (
+            'protocol', 'msgtype', 'merchant', 'amount', 'finalize',
+            'transaction', 'apikey', 'secret')
+
+        md5_check = self._gen_md5_check(fields_ord, fields)
+
+        fields.update({'md5check': md5_check})
 
         return self._execute(fields)
 
-    def status_from_order(self,transaction):
+    def status_from_order(self, transaction):
         """
         This message type is used when the merchant wants to check the status of a transaction. 
         The response from this message type differs from the others as it contains the history 
@@ -246,8 +258,8 @@ class QuickPayWebService(object):
             raise QuickPayWebServiceError(error_label % (status_code, message_by_code[status_code], ''), status_code)
         elif status_code in message_by_code:
             raise QuickPayWebServiceError(error_label % (status_code, message_by_code[status_code], ''), status_code)
-    
-        
+
+
     def _execute(self, fields=None, add_headers=None):
         """
         Execute a request on the QuickPay Webservice
@@ -276,23 +288,45 @@ class QuickPayWebService(object):
         status_code = int(header['status'])
         self._check_status_code(status_code, content)
         content = xml2dict.xml2dict(content)
-        return content, status_code, header
+        resp = {
+            'content': content.get('response'),
+            'status_code': status_code,
+            'header': header
+            }
+        return resp
 
 if __name__ == '__main__':
 
     from pprint import pprint
+    import random
+    import pdb
+
+    ordernumber = random.randrange(100000090, 1200000000)
 
     merchant = '89898978'
     secret = '29p61DveBZ79c3144LW61lVz1qrwk2gfAFCxPyi5sn49m3Y3IRK5M6SN5d8a68u7'
     api_key = '3uNkazijf7e49nvA224894FtGIEmS6U31CcYV82519M5w733ypqQ56987T5XlWrD'
+
     quickpay = QuickPayWebService(merchant, secret, api_key)
 
-    pprint(quickpay.authorize(
-        ordernumber='444335566234234',
+    # make authorize for 1 DKK
+    resp = quickpay.authorize(
+        ordernumber,
         amount='100',
         currency='DKK',
         cardnumber='4571000000000001',
         expirationdate='1609',
         cvd='123',
         testmode=True
-    ))
+    )
+
+    pdb.set_trace()
+    transaction = resp.get('content').get('transaction')
+
+    resp = quickpay.capture(transaction, '025')
+    resp = quickpay.capture(transaction, '025')
+    resp = quickpay.capture(transaction, '025')
+    resp = quickpay.capture(transaction, '025')
+    pprint(resp)
+    resp = quickpay.capture(transaction, '025')
+    pprint(resp)
