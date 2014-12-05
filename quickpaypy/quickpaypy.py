@@ -169,9 +169,19 @@ class QuickPayWebService(object):
         """
 
         fields = {
+            'protocol': self._api_protocol,
+            'merchant': self._api_merchant,
             'msgtype': 'cancel',
-            'transaction': transaction
+            'transaction': transaction,
+            'apikey': self._api_key,
+            'secret': self._api_secret
             }
+
+        fields_ord = (
+            'protocol', 'msgtype', 'merchant',
+            'transaction', 'apikey', 'secret')
+
+        fields = self._prepare_fields(fields_ord, fields)
 
         return self._execute(fields)
 
